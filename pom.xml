@@ -34,7 +34,7 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-community-dialects</artifactId>
-            <version>6.2.5.Final</version>
+            <version>6.2.6.Final</version>
         </dependency>
 
         <!-- Hikari -->
