@@ -2134,17 +2134,42 @@ public record SQLWorker(SQLConnector sqlConnector) {
     //region Data delete
 
     /**
+     * Cache of every @Entity annotated class, since the classpath cannot change at runtime.
+     */
+    private static volatile Set<Class<?>> entityClasses;
+
+    /**
+     * Get every @Entity annotated class, scanning the classpath at most once.
+     *
+     * @return the entity classes.
+     */
+    private static Set<Class<?>> getEntityClasses() {
+        Set<Class<?>> cached = entityClasses;
+
+        if (cached == null) {
+            synchronized (SQLWorker.class) {
+                cached = entityClasses;
+                if (cached == null) {
+                    cached = new Reflections(
+                            ConfigurationBuilder
+                                    .build()
+                                    .forPackage("de.presti.ree6.sql.entities", ClasspathHelper.staticClassLoader()))
+                            .getTypesAnnotatedWith(Entity.class);
+                    entityClasses = cached;
+                }
+            }
+        }
+
+        return cached;
+    }
+
+    /**
      * Delete Data saved in our Database by the given Guild ID.
      *
      * @param guildId the ID of the Guild.
      */
     public void deleteAllData(long guildId) {
-        Set<Class<?>> classSet = new Reflections(
-                ConfigurationBuilder
-                        .build()
-                        .forPackage("de.presti.ree6.sql.entities", ClasspathHelper.staticClassLoader()))
-                .getTypesAnnotatedWith(Entity.class);
-        for (Class<?> clazz : classSet) {
+        for (Class<?> clazz : getEntityClasses()) {
             Field[] fields = clazz.getFields();
             Field[] superFields = null;
 
@@ -2332,7 +2357,7 @@ public record SQLWorker(SQLConnector sqlConnector) {
      * @return The mapped entity.
      */
     public <R> Mono<List<R>> getEntityList(@NotNull R r, @NotNull String sqlQuery, @Nullable Map<String, Object> parameters, int limit) {
-        return Mono.just(getEntityListInternal(r, sqlQuery, parameters, limit));
+        return Mono.fromCallable(() -> getEntityListInternal(r, sqlQuery, parameters, limit));
     }
 
     /**
@@ -2383,7 +2408,7 @@ public record SQLWorker(SQLConnector sqlConnector) {
      * @return The mapped Version of the given Class-Entity.
      */
     public <R> Mono<Optional<R>> getEntity(@NotNull R r, @NotNull String sqlQuery, @Nullable Map<String, Object> parameters) {
-        return Mono.just(getEntityInternal(r, sqlQuery, parameters));
+        return Mono.fromCallable(() -> getEntityInternal(r, sqlQuery, parameters));
     }
 
     /**

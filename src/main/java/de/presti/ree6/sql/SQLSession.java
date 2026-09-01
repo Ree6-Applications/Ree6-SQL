@@ -67,6 +67,12 @@ public class SQLSession {
     static int maxPoolSize;
 
     /**
+     * How long a caller may wait for a connection before Hikari gives up. The default of 30s turns
+     * pool exhaustion into a half-minute stall on the calling thread.
+     */
+    static final long CONNECTION_TIMEOUT_MS = 5_000L;
+
+    /**
      * The SessionFactory used to create Sessions.
      */
     static SessionFactory sessionFactory;
@@ -237,6 +243,7 @@ public class SQLSession {
         }
 
         properties.put("hibernate.hikari.maximumPoolSize", String.valueOf(getMaxPoolSize()));
+        properties.put("hibernate.hikari.connectionTimeout", String.valueOf(CONNECTION_TIMEOUT_MS));
         //properties.put("hibernate.dialect", getDatabaseTyp().getHibernateDialect());
 
         if (databaseTyp == DatabaseTyp.SQLite)
@@ -306,6 +313,7 @@ public class SQLSession {
         }
 
         hConfig.setMaximumPoolSize(getMaxPoolSize());
+        hConfig.setConnectionTimeout(CONNECTION_TIMEOUT_MS);
         hConfig.setDriverClassName(getDatabaseTyp().getDriverClass());
 
         if (databaseTyp == DatabaseTyp.SQLite) {
